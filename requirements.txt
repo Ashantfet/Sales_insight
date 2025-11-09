@@ -1,0 +1,8 @@
+requests
+typer
+python-dotenv
+groq
+diskcache
+dateparser
+streamlit
+pytest
