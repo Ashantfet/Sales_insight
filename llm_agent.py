@@ -86,29 +86,35 @@ def fetch_sales_data():
 def analyze_sales_with_llm(query: str, data=None):
     """
     Analyze sales data using LLM.
-
-    Args:
-        query (str): Natural language query (e.g. 'What were our best-selling items yesterday?')
-        data (list, optional): Sales data. If not provided, fetches automatically.
-
-    Returns:
-        str: LLM-generated analysis
+    Automatically handles both list and dict-based inputs.
     """
 
     if not query:
         raise ValueError("Query cannot be empty.")
 
-    # ✅ If data is not provided, fetch it automatically
+    # ✅ Step 1: Handle missing data
     if data is None:
         data = fetch_sales_data()
 
-    # Prepare the data sample for the LLM (limit for context length)
-    sample_data = data[:10]  # You can adjust for efficiency
+    # ✅ Step 2: Handle dict-style API responses
+    # Some responses wrap data inside {"orders": [...]}
+    if isinstance(data, dict):
+        if "orders" in data:
+            orders = data["orders"]
+        else:
+            raise KeyError("Expected 'orders' key in the API response.")
+    elif isinstance(data, list):
+        orders = data
+    else:
+        raise TypeError(f"Unsupported data type: {type(data)}")
+
+    # ✅ Step 3: Limit data for context length
+    sample_data = orders[:10]
     context = json.dumps(sample_data, indent=2)
 
-    # LLM prompt
+    # ✅ Step 4: Prepare the LLM prompt
     prompt = f"""
-    You are a Sales Analysis Assistant. 
+    You are a Sales Analysis Assistant.
     The user will ask questions about sales data (items, revenue, trends, etc.).
     Use the following JSON data to answer accurately and concisely.
 
@@ -122,7 +128,7 @@ def analyze_sales_with_llm(query: str, data=None):
 
     try:
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",  # You can replace with another model if needed
+            model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.2,
         )
